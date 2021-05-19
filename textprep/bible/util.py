@@ -43,7 +43,7 @@ def join_verses(frame, ref):
 
     assert len(indexes) <= 1, "More than one index found. {}".format(indexes)
 
-    if len(indexes) is 1:
+    if len(indexes) == 1:
 
         frame_copy.loc[indexes, 'Scripture'] = new_verse_text
         n_repeated_verses = len(ref[-1])

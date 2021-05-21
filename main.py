@@ -42,8 +42,7 @@ def main(argv):
     print('Output dir is ', args.output_dir)
 
     aligned_df = run_preprocessing(args.input_dir, output_dir=args.output_dir)
-    aligned_df.to_csv(args.output_dir + '_' + 'aligned_text.csv', index=False, index_label=False,
-                      encoding='utf8')
+
 
 
 if __name__ == "__main__":

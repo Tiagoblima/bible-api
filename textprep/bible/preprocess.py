@@ -26,14 +26,7 @@ class CleanUpText:
         pass
 
 
-patterns = [r'<sup>\(.*\)</sup>', r'<.*?>[;]*',
-            r'\w+ [0-9]{1,2}\.[0-9]{1,2}[–][0-9]{1,2}.[0-9]{1,3}',
-            r'([0-9]*(\s*\w+){1,3} [0-9]{1,2}\.[0-9]{1,3}[-]*[0-9]*[;]*)',
-            r'[,] [0-9]{1,2}\.[0-9]{1,3}[-]*[0-9]*',
-            r'\([0-9]*.[0-9]*[-][0-9]*\)', r'\([-]\)', r'\(|\)',
-            r'[0-9]{1,2}\.[0-9]{1,3}[-][0-9]{1,3}', r'\{\}', r'\[\]', r'\s[;]\s',
-            r'\s[,]\s', r'\s+'
-            ]
+patterns = [r'<sup>\(.*\)</sup>', r'<.*?>[;]*', r'\[[0-9][0-9]*-[0-9][0-9]*]']
 
 
 # r'\s[,]\s[0-9]{1,3}[-][0-9]{1,3}', r'\s[;]\s', ',
@@ -194,7 +187,7 @@ class Dataset:
 
 class TextPreprocess:
     dataframes = None
-    version_list = []
+
     root_dir = 'adasd'
     data_pairs = {}
 
@@ -203,7 +196,7 @@ class TextPreprocess:
                  from_sqlite=True,
                  clean_out_dir=False,
                  load_files=True):
-
+        self.version_list = []
         self.output_dir = output_dir
         self.root_dir = dir_path
 
@@ -218,7 +211,8 @@ class TextPreprocess:
             self.version_list = [unicode_to_ascii(version.split(' ')[0].lower())
                                  for version in os.listdir(dir_path)]
 
-        self.aligned_df = pd.DataFrame(columns=["Book", "Chapter", "Verse"] + self.version_list)
+
+        self.aligned_df = pd.DataFrame(columns=["Book", "Chapter", "Verse"])
 
         if clean_out_dir:
             delete_all_files(output_dir)
@@ -313,6 +307,10 @@ class TextPreprocess:
 
         self.logs["align_versions"] += spent_time
 
+        self.aligned_df.to_csv('_'.join([column.split('.')[0] for column in self.aligned_df.columns[3:]]) +
+                               '_' + 'aligned.csv', index=False, index_label=False,
+                          encoding='utf8')
+
         return self.aligned_df
 
     def _group_ref(self, ref):
@@ -328,7 +326,7 @@ class TextPreprocess:
 
         suc_count = 0
         for i, df in enumerate(self.dataframes):
-            version = self.version_list[i]
+            version = self.version_list[i].split('.')[0].upper()
 
             try:
 
@@ -455,8 +453,7 @@ class TextPreprocess:
 
     def _save_dfs(self):
         for i, df in enumerate(self.dataframes):
-
-            df.to_csv(os.path.join(os.path.join(self.output_dir, self.version_list[i]) + '.csv'), index_label=False, index=False)
+            df.to_csv(os.path.join(os.path.join(self.output_dir, self.version_list[i])), index_label=False, index=False)
 
     def to_txt_file(self, dir_path=os.curdir):
         """
@@ -470,11 +467,13 @@ class TextPreprocess:
 
             from_text_to_file(scripture, path)
 
-    def run_pipeline(self, save_aligned_df=True):
+    def run_pipeline(self):
 
         self.join_verses()
         self.clean_verses()
         self.align_versions()
 
         self._save_dfs()
+
+
         return self.aligned_df

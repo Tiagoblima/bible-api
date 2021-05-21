@@ -78,7 +78,7 @@ def find_joined_ref(dataframe):
 
         text = line['Scripture']
 
-        found = re.findall(r'\[[0-9][0-9]*\-[0-9][0-9]*\]', text)
+        found = re.findall(r'\[[0-9][0-9]*-[0-9][0-9]*]', text)
 
         for search in found:
             v_range = re.findall(r'[0-9][0-9]*', search)

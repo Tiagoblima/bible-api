@@ -211,7 +211,6 @@ class TextPreprocess:
             self.version_list = [unicode_to_ascii(version.split(' ')[0].lower())
                                  for version in os.listdir(dir_path)]
 
-
         self.aligned_df = pd.DataFrame(columns=["Book", "Chapter", "Verse"])
 
         if clean_out_dir:
@@ -309,7 +308,7 @@ class TextPreprocess:
 
         self.aligned_df.to_csv('_'.join([column.split('.')[0] for column in self.aligned_df.columns[3:]]) +
                                '_' + 'aligned.csv', index=False, index_label=False,
-                          encoding='utf8')
+                               encoding='utf8')
 
         return self.aligned_df
 
@@ -474,6 +473,5 @@ class TextPreprocess:
         self.align_versions()
 
         self._save_dfs()
-
 
         return self.aligned_df

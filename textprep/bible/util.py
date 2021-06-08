@@ -64,6 +64,11 @@ def join_verses(frame, ref):
     return frame, logs + result
 
 
+SEARCH_PATTERN = r'\[\d+-\d+\]'
+
+
+# r'<sup>\([0-9][0-9]*-[0-9][0-9]*\)</sup>'
+
 def find_joined_ref(dataframe):
     """
     Finds joined references using the pattern <sup>(.*)</sup>
@@ -73,12 +78,12 @@ def find_joined_ref(dataframe):
     """
 
     searches = []
-
+    version, dataframe = dataframe
     for i, line in dataframe.iterrows():
 
         text = line['Scripture']
 
-        found = re.findall(r'<sup>\([0-9][0-9]*-[0-9][0-9]*\)</sup>', text)
+        found = re.findall(SEARCH_PATTERN, text)
 
         for search in found:
             v_range = re.findall(r'[0-9][0-9]*', search)
@@ -88,7 +93,7 @@ def find_joined_ref(dataframe):
                 continue
 
             book, chapter = line['Book'], line['Chapter']
-            searches.append((book, chapter, range(v_range[0], v_range[1] + 1)))
+            searches.append((version, (book, chapter, range(v_range[0], v_range[1] + 1))))
 
     return searches
 

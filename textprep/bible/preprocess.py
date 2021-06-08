@@ -26,11 +26,16 @@ class CleanUpText:
         pass
 
 
-patterns = [r'<sup>\(.*\)</sup>', r'<.*?>[;]*', r'\[[0-9][0-9]*-[0-9][0-9]*]', r'\(-\)']
+patterns = [r'<sup>\(.*\)</sup>',
+            r'<.*?>[;]*',
+            r'\[[0-9][0-9]*-[0-9][0-9]*]',
+            r'\(-\)',
+            r'\[\d+-\d+\]\s']
 
 
 # r'\s[,]\s[0-9]{1,3}[-][0-9]{1,3}', r'\s[;]\s', ',
 def clean_df(df):
+    version, df = df
     cleaners = [re.compile(pattern) for pattern in patterns]
     for cleaner in cleaners:
         df.replace(to_replace=cleaner, value=' ', regex=True, inplace=True)
@@ -38,7 +43,7 @@ def clean_df(df):
     refs = get_references()
     for ref in refs:
         df.replace(to_replace=ref, value=' ', regex=True, inplace=True)
-    return df
+    return version, df
 
 
 def generate_indexes(total_examples, test_per, val_per):
@@ -245,7 +250,8 @@ class TextPreprocess:
             path = os.path.join(self.root_dir, name)
 
             try:
-                self.dataframes.append(pd.read_csv(path, encoding='utf-8'))
+                self.dataframes.append((unicode_to_ascii(name.lower()),
+                                        pd.read_csv(path, encoding='utf-8')))
 
             except FileNotFoundError:
                 return "The path " + path + " was not found."
@@ -280,7 +286,7 @@ class TextPreprocess:
 
         start = time.time()
         try:
-            ref_df = self.dataframes[0]
+            ref_df = self.dataframes[0][1]
         except IndexError:
             raise ValueError("Check your director it might be empty.")
         books = set(ref_df['Book'].to_numpy().astype(int))
@@ -323,9 +329,8 @@ class TextPreprocess:
                       'Chapter': str(chapter),
                       'Verse': str(verse)}
 
-        suc_count = 0
         for i, df in enumerate(self.dataframes):
-            version = self.version_list[i].split('.')[0].upper()
+            version, df = df
 
             try:
 
@@ -333,14 +338,14 @@ class TextPreprocess:
                                & (df['Chapter'] == chapter)
                                & (df['Verse'] == verse)]['Scripture'].to_numpy().tolist()[0]
                 scripture = scripture.strip().replace('\"', '')
-                new_verses[version] = scripture
-
-                suc_count += 1
+                new_verses[version.split('.')[0]] = scripture
 
             except IndexError:
 
                 self.logs["align_versions"] += '-Missing in version: ' + version
                 self.logs["align_versions"] += '\tFAIL'
+                self.aligned_df = self.aligned_df[:-1]
+                return False
                 # print('-Missing in version: ' + version)
 
                 # pdb.set_trace()
@@ -348,19 +353,19 @@ class TextPreprocess:
             except KeyError:
                 self.logs["align_versions"] += '-Missing in version: ' + version
                 self.logs["align_versions"] += '\tFAIL'
-
+                self.aligned_df = self.aligned_df[:-1]
+                return False
                 # pdb.set_trace()
 
-        if suc_count is len(self.version_list):
-            self.aligned_df = self.aligned_df.append(new_verses, ignore_index=True)
-            return True
-        return False
+        self.aligned_df = self.aligned_df.append(new_verses, ignore_index=True)
+
+        return True
 
     def save_report(self):
         """
          Saves a report of the process execution.
         """
-        ctime = re.sub('[:]', '.', str(datetime.datetime.now().time()))
+        ctime = re.sub('[:]', '.', str(datetime.datetime.now()))
         file = open(os.path.join('logs', 'report {}.txt'.format(ctime)), 'w')
 
         for keys in self.logs.keys():
@@ -378,46 +383,51 @@ class TextPreprocess:
         Also, it deletes the old indexes where the joined verse was found.
         returns: new frame with the new verse.
         """
+        frame_version, frame = frame
+        frame_copy = frame.copy()
+
+        ref_version, ref = ref
         book, chapter, verses = ref
-
-        texts = [frame[(frame['Book'] == book) &
-                       (frame['Chapter'] == chapter) &
-                       (frame['Verse'] == verse)]['Scripture'].to_numpy().tolist()
-                 for verse in verses]
-
-        if len(texts[-1]) == 0:
-            raise Warning("Reference not found. Skipping..." + str(ref))
-
-        new_verse_text = ' '.join(list(itertools.chain.from_iterable(texts)))
 
         indexes = frame.index[(frame['Book'] == book) &
                               (frame['Chapter'] == chapter) &
                               (frame['Verse'] == list(verses)[0])].to_list()
-        frame_copy = frame.copy()
 
-        if len(indexes) > 1:
-            raise ValueError("More than one index found. {}".format(indexes))
-        if len(indexes) == 0:
-            raise Warning("Reference not found. Skipping...\n")
+        if frame_version != ref_version:
+            texts = [frame[(frame['Book'] == book) &
+                           (frame['Chapter'] == chapter) &
+                           (frame['Verse'] == verse)]['Scripture'].to_numpy().tolist()
+                     for verse in verses]
 
-        frame_copy.loc[indexes, 'Scripture'] = new_verse_text
+            if len(texts[-1]) == 0:
+                raise Warning("Reference not found. Skipping..." + str(ref))
+
+            new_verse_text = ' '.join(list(itertools.chain.from_iterable(texts)))
+
+            if len(indexes) > 1:
+                raise ValueError("More than one index found. {}".format(indexes))
+            if len(indexes) == 0:
+                raise Warning("Reference not found. Skipping...\n")
+
+            frame_copy.loc[indexes, 'Scripture'] = new_verse_text
+
         n_repeated_verses = len(ref[-1])
         indexes_to_drop = list(range(indexes[0] + 1, indexes[0] + n_repeated_verses))
         frame = frame_copy.drop(indexes_to_drop)
 
-        return frame
+        return frame_version, frame
 
     def to_join(self, ref):
         func_log = ""
+
         for i, frame in enumerate(self.dataframes):
             try:
                 self.dataframes[i] = self._replace_verse(ref, frame)
             except Warning:
-                func_log += "Reference not found. Skipping..." + str(ref) + '-' + \
+                func_log += "\nReference not found. Skipping..." + str(ref) + '-' + \
                             self.version_list[i] + '\n'
-
             except KeyError:
-                func_log += 'KeyError when dropping the indexes: ' + str(ref) + '\n'
+                func_log += '\nKeyError when dropping the indexes: ' + str(ref) + '\n'
 
             except IndexError:
                 func_log += "\nNOT REPLACED AT {} VERSION {}".format(ref, self.version_list[i]) + '\n'
@@ -438,6 +448,7 @@ class TextPreprocess:
         self.logs["_replace_verse"] = ""
         start = time.time()
         p = Pool(3)
+
         all_references = list(itertools.chain.from_iterable(p.map(find_joined_ref, self.dataframes)))
 
         for ref in set(all_references):
@@ -452,7 +463,8 @@ class TextPreprocess:
 
     def _save_dfs(self):
         for i, df in enumerate(self.dataframes):
-            df.to_csv(os.path.join(os.path.join(self.output_dir, self.version_list[i])), index_label=False, index=False)
+            version_df, df = df
+            df.to_csv(os.path.join(os.path.join(self.output_dir, version_df)), index_label=False, index=False)
 
     def to_txt_file(self, dir_path=os.curdir):
         """
@@ -473,5 +485,5 @@ class TextPreprocess:
         self.align_versions()
 
         self._save_dfs()
-
+        self.save_report()
         return self.aligned_df

@@ -43,6 +43,7 @@ def clean_df(df):
     refs = get_references()
     for ref in refs:
         df.replace(to_replace=ref, value=' ', regex=True, inplace=True)
+
     return version, df
 
 
@@ -248,10 +249,13 @@ class TextPreprocess:
         for name in os.listdir(self.root_dir):
 
             path = os.path.join(self.root_dir, name)
-
+            df = pd.read_csv(path, encoding='utf-8')
+            num_verses = df.shape[0]
+            df = df.drop_duplicates(subset=['Scripture'])
+            print(f"{name}- duplicates Deleted verses: ", num_verses - df.shape[0])
             try:
-                self.dataframes.append((unicode_to_ascii(name.lower()),
-                                        pd.read_csv(path, encoding='utf-8')))
+                self.dataframes.append((unicode_to_ascii(name.lower()), df
+                                        ))
 
             except FileNotFoundError:
                 return "The path " + path + " was not found."
@@ -366,6 +370,10 @@ class TextPreprocess:
          Saves a report of the process execution.
         """
         ctime = re.sub('[:]', '.', str(datetime.datetime.now()))
+        try:
+            os.mkdir('logs')
+        except OSError:
+            pass
         file = open(os.path.join('logs', 'report {}.txt'.format(ctime)), 'w')
 
         for keys in self.logs.keys():

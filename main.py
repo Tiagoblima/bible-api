@@ -1,7 +1,7 @@
 import argparse
 import getopt
 import sys
-
+import os
 import pandas as pd
 
 from textprep.bible.preprocess import TextPreprocess
@@ -13,7 +13,7 @@ pt_versions = versions = ['ntlh', 'nvi', 'aa', 'acf']
 
 def run_preprocessing(base_dir, output_dir=None):
     if output_dir is None:
-        output_dir = base_dir
+        output_dir = os.path.join('outputs', base_dir)
 
     text_prep = TextPreprocess(base_dir,
                                output_dir=output_dir,
@@ -32,8 +32,8 @@ def main(argv):
 
     parser.add_argument('--input_dir', type=str,
                         help='O ano de backup', required=True)
-    parser.add_argument('--output_dir', type=str,
-                        help='O ano de backup', required=True)
+    parser.add_argument('--output_dir', type=str, default=None,
+                        help='O ano de backup', required=False)
     parser.add_argument('--from_sqlite', action="store_true",
                         help='Não reseta o banco antes da modificação')
     args = parser.parse_args()

@@ -1,5 +1,6 @@
 import argparse
 import getopt
+from re import A
 import sys
 import os
 import pandas as pd
@@ -11,13 +12,14 @@ pd.set_option('display.max_colwidth', None)
 pt_versions = versions = ['ntlh', 'nvi', 'aa', 'acf']
 
 
-def run_preprocessing(base_dir, output_dir=None):
-    if output_dir is None:
-        output_dir = os.path.join('outputs', base_dir)
+def run_preprocessing(args):
 
-    text_prep = TextPreprocess(base_dir,
+    if args.output_dir is None:
+        output_dir = os.path.join('outputs', args.input_dir)
+
+    text_prep = TextPreprocess(args.input_dir,
                                output_dir=output_dir,
-                               from_sqlite=False,
+                               from_sqlite=args.from_sqlite,
                                clean_out_dir=False,
                                load_files=True)
 
@@ -41,7 +43,7 @@ def main(argv):
     print('Input dir is ', args.input_dir)
     print('Output dir is ', args.output_dir)
 
-    aligned_df = run_preprocessing(args.input_dir, output_dir=args.output_dir)
+    aligned_df = run_preprocessing(args)
     aligned_df.to_csv('aligned_df.csv')
 
 

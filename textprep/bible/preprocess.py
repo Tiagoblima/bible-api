@@ -470,6 +470,13 @@ class TextPreprocess:
         return self.dataframes
 
     def _save_dfs(self):
+        print('Saving dataframes...')
+        try:
+            print('Creating dataset...')
+            os.makedirs(self.output_dir)
+            
+        except OSError:
+            pass
         for i, df in enumerate(self.dataframes):
             version_df, df = df
             df.to_csv(os.path.join(os.path.join(self.output_dir, version_df)), index_label=False, index=False)

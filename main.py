@@ -1,8 +1,7 @@
 import argparse
-import getopt
-from re import A
-import sys
 import os
+import sys
+
 import pandas as pd
 
 from textprep.bible.preprocess import TextPreprocess
@@ -15,10 +14,10 @@ pt_versions = versions = ['ntlh', 'nvi', 'aa', 'acf']
 def run_preprocessing(args):
 
     if args.output_dir is None:
-        output_dir = os.path.join('outputs', args.input_dir)
+        args.output_dir = os.path.join('outputs', args.input_dir)
 
     text_prep = TextPreprocess(args.input_dir,
-                               output_dir=output_dir,
+                               output_dir=args.output_dir,
                                from_sqlite=args.from_sqlite,
                                clean_out_dir=False,
                                load_files=True)

@@ -249,6 +249,9 @@ class TextPreprocess:
         for name in os.listdir(self.root_dir):
 
             path = os.path.join(self.root_dir, name)
+
+            if not path.endswith('.csv'):
+                continue
             df = pd.read_csv(path, encoding='utf-8')
             num_verses = df.shape[0]
             df = df.drop_duplicates(subset=['Scripture'])
